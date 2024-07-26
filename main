@@ -1,0 +1,115 @@
+import re
+
+# Análise Léxica
+class AnalisadorLexico:
+    def __init__(self, texto_entrada):
+        self.tokens = []
+        self.token_atual = None
+        self.tokenizar(texto_entrada)
+    
+    def tokenizar(self, texto_entrada):
+        especificacao_tokens = [
+            ('ADICIONAR_LIVRO', r'ADICIONAR_LIVRO'),
+            ('REMOVER_LIVRO', r'REMOVER_LIVRO'),
+            ('BUSCAR_LIVRO', r'BUSCAR_LIVRO'),
+            ('STRING', r'\".*?\"'),
+            ('VIRGULA', r','),
+            ('ESPACO', r'\s+'),
+        ]
+        
+        regex_tokens = '|'.join('(?P<%s>%s)' % par for par in especificacao_tokens)
+        for mo in re.finditer(regex_tokens, texto_entrada):
+            tipo = mo.lastgroup
+            valor = mo.group(tipo)
+            if tipo != 'ESPACO':  # Ignorar espaços em branco
+                self.tokens.append((tipo, valor))
+    
+    def proximo_token(self):
+        if self.tokens:
+            self.token_atual = self.tokens.pop(0)
+        else:
+            self.token_atual = None
+        return self.token_atual
+
+# Análise Sintática
+class AnalisadorSintatico:
+    def __init__(self, analisador_lexico):
+        self.analisador_lexico = analisador_lexico
+        self.token_atual = self.analisador_lexico.proximo_token()
+    
+    def analisar(self):
+        if self.token_atual[0] == 'ADICIONAR_LIVRO':
+            return self.analisar_adicionar_livro()
+        elif self.token_atual[0] == 'REMOVER_LIVRO':
+            return self.analisar_remover_livro()
+        elif self.token_atual[0] == 'BUSCAR_LIVRO':
+            return self.analisar_buscar_livro()
+        else:
+            raise SyntaxError('Comando desconhecido: ' + self.token_atual[1])
+    
+    def analisar_adicionar_livro(self):
+        self.comer('ADICIONAR_LIVRO')
+        titulo = self.comer('STRING')
+        self.comer('VIRGULA')
+        autor = self.comer('STRING')
+        return ('ADICIONAR_LIVRO', titulo[1:-1], autor[1:-1])  # Remove as aspas
+    
+    def analisar_remover_livro(self):
+        self.comer('REMOVER_LIVRO')
+        titulo = self.comer('STRING')
+        return ('REMOVER_LIVRO', titulo[1:-1])
+    
+    def analisar_buscar_livro(self):
+        self.comer('BUSCAR_LIVRO')
+        titulo = self.comer('STRING')
+        return ('BUSCAR_LIVRO', titulo[1:-1])
+    
+    def comer(self, tipo_token):
+        if self.token_atual[0] == tipo_token:
+            token = self.token_atual
+            self.token_atual = self.analisador_lexico.proximo_token()
+            return token[1]
+        else:
+            raise SyntaxError('Esperava ' + tipo_token + ' mas encontrou ' + self.token_atual[0])
+
+# Análise Semântica
+class AnalisadorSemantico:
+    def __init__(self, biblioteca):
+        self.biblioteca = biblioteca
+    
+    def analisar(self, ast):
+        comando = ast[0]
+        if comando == 'ADICIONAR_LIVRO':
+            titulo, autor = ast[1], ast[2]
+            if titulo in self.biblioteca:
+                raise ErroSemantico(f'O livro "{titulo}" já existe na biblioteca.')
+        elif comando == 'REMOVER_LIVRO':
+            titulo = ast[1]
+            if titulo not in self.biblioteca:
+                raise ErroSemantico(f'O livro "{titulo}" não existe na biblioteca.')
+        elif comando == 'BUSCAR_LIVRO':
+            titulo = ast[1]
+            if titulo not in self.biblioteca:
+                raise ErroSemantico(f'O livro "{titulo}" não existe na biblioteca.')
+        else:
+            raise ErroSemantico('Comando desconhecido: ' + comando)
+
+class ErroSemantico(Exception):
+    pass
+
+# Geração de Código
+class GeradorCodigo:
+    def __init__(self, biblioteca):
+        self.biblioteca = biblioteca
+    
+    def gerar(self, ast):
+        comando = ast[0]
+        if comando == 'ADICIONAR_LIVRO':
+            titulo, autor = ast[1], ast[2]
+            self.biblioteca[titulo] = autor
+        elif comando == 'REMOVER_LIVRO':
+            titulo = ast[1]
+            del self.biblioteca[titulo]
+        elif comando == 'BUSCAR_LIVRO':
+            titulo = ast[1]
+            return self.biblioteca.get(titulo, 'Livro não encontrado')
