@@ -1,0 +1,41 @@
+from compilador_biblioteca import AnalisadorLexico, AnalisadorSintatico, AnalisadorSemantico, GeradorCodigo
+
+# Exemplo de uso
+texto_entrada = 'ADICIONAR_LIVRO "O Senhor dos Anéis", "J.R.R. Tolkien"'
+analisador_lexico = AnalisadorLexico(texto_entrada)  # Análise Léxica
+analisador_sintatico = AnalisadorSintatico(analisador_lexico)  # Análise Sintática
+ast = analisador_sintatico.analisar()
+print('AST:', ast)
+
+# Biblioteca inicial
+biblioteca = {}
+
+# Análise Semântica
+analisador_semantico = AnalisadorSemantico(biblioteca)
+analisador_semantico.analisar(ast)
+
+# Geração de Código
+gerador_codigo = GeradorCodigo(biblioteca)
+gerador_codigo.gerar(ast)
+print('Biblioteca:', biblioteca)
+
+# Testando outros comandos
+texto_entrada = 'BUSCAR_LIVRO "O Senhor dos Anéis"'
+analisador_lexico = AnalisadorLexico(texto_entrada)
+analisador_sintatico = AnalisadorSintatico(analisador_lexico)
+ast = analisador_sintatico.analisar()
+print('AST:', ast)
+
+analisador_semantico.analisar(ast)
+resultado = gerador_codigo.gerar(ast)
+print('Resultado da busca:', resultado)
+
+texto_entrada = 'REMOVER_LIVRO "O Senhor dos Anéis"'
+analisador_lexico = AnalisadorLexico(texto_entrada)
+analisador_sintatico = AnalisadorSintatico(analisador_lexico)
+ast = analisador_sintatico.analisar()
+print('AST:', ast)
+
+analisador_semantico.analisar(ast)
+gerador_codigo.gerar(ast)
+print('Biblioteca após remoção:', biblioteca)
